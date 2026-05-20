@@ -1,0 +1,18 @@
+# Python & Environment
+venv/
+__pycache__/
+*.pyc
+
+# Security & Secrets
+.env
+*.key
+*.crt
+*.pem
+
+# Database
+instance/
+*.db
+*.sqlite3
+
+# Uploads
+uploads/
