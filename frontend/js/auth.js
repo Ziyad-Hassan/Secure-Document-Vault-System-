@@ -41,6 +41,19 @@ function initLoginPage() {
 
   let partialToken = null;
 
+  // --- Catch OAuth 2FA redirect ---
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("requires_2fa") === "true") {
+    partialToken = urlParams.get("partial_token");
+    loginSection.style.display = "none";
+    twofaSection.style.display = "block";
+    showAlert("alert-area", "GitHub login successful. Please enter your 2FA code.", "info");
+    document.getElementById("totp-code")?.focus();
+    
+    // Clean the URL so refreshing doesn't keep showing the 2FA screen
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   // Toggle password visibility
   togglePw?.addEventListener("click", () => {
     const type = pwInput.type === "password" ? "text" : "password";
@@ -124,7 +137,6 @@ function initLoginPage() {
   // ── GitHub OAuth Logic (Direct Redirect) ─────────
   githubBtn?.addEventListener("click", (e) => {
     e.preventDefault();
-    // تحويل مباشر في نفس الصفحة
     window.location.href = "/api/oauth/login";
   });
 }

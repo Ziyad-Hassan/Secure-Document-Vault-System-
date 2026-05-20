@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, redirect, request
 from authlib.integrations.flask_client import OAuth
 from models.user import User, Role
 from extensions import db
-from middleware.jwt_auth import generate_access_token, generate_refresh_token
+from middleware.jwt_auth import generate_access_token, generate_refresh_token, generate_partial_token
 import urllib.parse
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -28,6 +28,7 @@ def init_oauth(app):
 @oauth_bp.route('/login')
 def login():
     return oauth.github.authorize_redirect(CALLBACK_URL, prompt='login')
+
 @oauth_bp.route('/callback')
 def auth_callback():
     try:
@@ -78,6 +79,15 @@ def auth_callback():
 
     if not user.is_active:
         return redirect("/?error=Account+deactivated")
+
+    # --- 2FA Check Enforced Here ---
+    if user.is_2fa_enabled:
+        partial_token = generate_partial_token(user.id)
+        params = urllib.parse.urlencode({
+            "requires_2fa": "true",
+            "partial_token": partial_token
+        })
+        return redirect(f"/?{params}")
 
     access_token  = generate_access_token(user.id, user.username, user.role.name)
     refresh_token = generate_refresh_token(user.id)

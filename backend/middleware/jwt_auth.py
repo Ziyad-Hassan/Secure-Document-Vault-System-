@@ -34,6 +34,17 @@ def generate_refresh_token(user_id: int) -> str:
     return jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm="HS256")
 
 
+def generate_partial_token(user_id: int) -> str:
+    """Generate a short-lived JWT token for 2FA verification (default: 5 min)."""
+    payload = {
+        "sub": user_id,
+        "type": "partial",
+        "iat": datetime.now(timezone.utc),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    }
+    return jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm="HS256")
+
+
 def decode_token(token: str) -> dict:
     """Decode and validate a JWT token. Raises jwt.ExpiredSignatureError or jwt.InvalidTokenError."""
     return jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=["HS256"])
