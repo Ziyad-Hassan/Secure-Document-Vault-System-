@@ -180,8 +180,6 @@ window.closeDeleteModal = function() {
 document.getElementById("confirm-delete-btn")?.addEventListener("click", async () => {
     if (!deleteDocId) return;
     
-    // Note: The delete route is usually added to backend, assuming it will be implemented.
-    // For now, we simulate the UI behavior.
     const { ok, data } = await api("DELETE", `/documents/${deleteDocId}`);
     
     closeDeleteModal();
@@ -208,14 +206,18 @@ async function openTwofaSetup() {
         return;
     }
 
+    const imgSrc = data.qr_code_b64 && data.qr_code_b64.startsWith('data:image') 
+        ? data.qr_code_b64 
+        : `data:image/png;base64,${data.qr_code_b64}`;
+
     content.innerHTML = `
-        <div style="text-align:center; margin-bottom:15px;">
-            <img src="data:image/png;base64,${data.qr_code_b64}" alt="QR Code" style="border-radius:8px; border:2px solid var(--border); padding:10px; background:white;">
+        <div style="text-align:center; margin-bottom:15px; display:flex; justify-content:center;">
+            <img src="${imgSrc}" alt="QR Code" style="width:180px; height:180px; object-fit:contain; border-radius:8px; border:2px solid var(--border); padding:10px; background:white;">
         </div>
         <p style="font-size:0.85rem; text-align:center; font-family:var(--font-mono); margin-bottom:15px;">${data.secret}</p>
         <p class="text-muted" style="font-size:0.85rem; text-align:center; margin-bottom:15px;">Scan this code using Google Authenticator, then enter the 6-digit code below to enable 2FA.</p>
         <div class="form-group">
-            <input type="text" id="setup-totp-code" class="form-input text-mono" placeholder="000000" maxlength="6">
+            <input type="text" id="setup-totp-code" class="form-input text-mono" placeholder="000000" maxlength="6" style="text-align:center; letter-spacing:4px; font-size:1.1rem;">
         </div>
         <button class="btn btn-primary" style="width:100%" onclick="enableTwofa()">Verify & Enable</button>
     `;

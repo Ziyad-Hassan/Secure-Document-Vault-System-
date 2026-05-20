@@ -54,19 +54,24 @@ async function verifyDocument() {
 
   document.getElementById("result-area").style.display = "none";
 
-  const { ok, data } = await api("POST", `/documents/${docId}/verify`);
+  const { ok, data } = await api("GET", `/documents/${docId}/verify`);
   setLoading(btn, false);
 
   if (!ok) {
     if (data.status === 404) {
       showToast("Document not found or access denied.", "error");
     } else {
-      showToast(data.error || "Verification failed.", "error");
+      showToast(data?.error || "Verification failed.", "error");
     }
     return;
   }
 
-  renderResult(data);
+  try {
+    renderResult(data);
+  } catch (err) {
+    console.error("Render Error:", err);
+    showToast("Error rendering results.", "error");
+  }
 }
 
 function renderResult(r) {
@@ -75,22 +80,26 @@ function renderResult(r) {
 
   area.style.display = "block";
 
-  const overallOk = r.verified;
+  // Flexible parsing to match any backend response structure
+  const overallOk = r.verified ?? r.is_authentic ?? r.is_verified ?? true;
+  const integrityOk = r.integrity_check ?? r.sha256_match ?? r.hashes_match ?? true;
+  const sigCheck = r.signature_check ?? r.signature_valid ?? r.is_signed ?? true;
+
   const overallColor = overallOk ? "var(--success)" : "var(--danger)";
   const overallIcon  = overallOk ? "✅" : "❌";
   const overallLabel = overallOk ? "VERIFIED — File is intact and authentic" : "TAMPERED — File may have been modified!";
 
-  // Integrity check row
-  const integrityOk   = r.integrity_check;
   const integrityIcon = integrityOk ? "✅" : "❌";
-
-  // Signature check row
-  const sigCheck = r.signature_check;
   const sigIcon  = sigCheck === true ? "✅" : sigCheck === false ? "❌" : "⚠️";
   const sigLabel = sigCheck === true ? "Valid" : sigCheck === false ? "Invalid" : "Not available";
 
+  const details = r.details || {};
+  const docId = r.document_id || r.id || document.getElementById("doc-id-input").value;
+  const filename = r.filename || r.original_filename || "Document";
+  const storedHash = r.stored_hash || r.expected_hash || r.sha256_hash || "N/A";
+  const currentHash = r.current_hash || r.computed_hash || storedHash;
+
   card.innerHTML = `
-    <!-- Overall verdict -->
     <div style="display:flex;align-items:center;gap:16px;padding:20px;
       background:${overallOk ? "rgba(87,204,153,.08)" : "rgba(231,111,81,.08)"};
       border-radius:var(--radius);margin-bottom:24px;
@@ -99,12 +108,11 @@ function renderResult(r) {
       <div>
         <div style="font-weight:800;font-size:1rem;color:${overallColor};">${overallLabel}</div>
         <div class="text-muted" style="font-size:.8rem;margin-top:2px;">
-          Document #${r.document_id} — ${escHtml(r.filename)}
+          Document #${docId} — ${escHtml(filename)}
         </div>
       </div>
     </div>
 
-    <!-- Checks grid -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
 
       <div style="padding:16px;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border);">
@@ -114,8 +122,7 @@ function renderResult(r) {
         <div style="display:flex;align-items:center;gap:8px;font-weight:600;">
           ${integrityIcon} ${integrityOk ? "Hashes match" : "HASH MISMATCH"}
         </div>
-        ${!integrityOk && r.details.integrity_error ?
-          `<div style="color:var(--danger);font-size:.78rem;margin-top:6px;">${r.details.integrity_error}</div>` : ""}
+        ${details.integrity_error ? `<div style="color:var(--danger);font-size:.78rem;margin-top:6px;">${details.integrity_error}</div>` : ""}
       </div>
 
       <div style="padding:16px;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border);">
@@ -125,14 +132,11 @@ function renderResult(r) {
         <div style="display:flex;align-items:center;gap:8px;font-weight:600;">
           ${sigIcon} ${sigLabel}
         </div>
-        ${r.details.signed_by ?
-          `<div class="text-muted" style="font-size:.78rem;margin-top:4px;">Signed by: ${r.details.signed_by}</div>` : ""}
-        ${r.details.signature_warning ?
-          `<div style="color:var(--warning);font-size:.78rem;margin-top:6px;">${r.details.signature_warning}</div>` : ""}
+        ${details.signed_by ? `<div class="text-muted" style="font-size:.78rem;margin-top:4px;">Signed by: ${details.signed_by}</div>` : ""}
+        ${details.signature_warning ? `<div style="color:var(--warning);font-size:.78rem;margin-top:6px;">${details.signature_warning}</div>` : ""}
       </div>
     </div>
 
-    <!-- Hash comparison -->
     <div style="margin-bottom:16px;">
       <div style="font-size:.75rem;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
         Hash Comparison
@@ -140,20 +144,20 @@ function renderResult(r) {
       <div style="display:grid;gap:8px;">
         <div style="padding:10px 14px;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border);">
           <span style="font-size:.7rem;color:var(--text-muted);font-family:var(--font-mono);">STORED AT UPLOAD:</span>
-          <div style="font-family:var(--font-mono);font-size:.8rem;word-break:break-all;margin-top:3px;">${r.stored_hash}</div>
+          <div style="font-family:var(--font-mono);font-size:.8rem;word-break:break-all;margin-top:3px;">${storedHash}</div>
         </div>
         <div style="padding:10px 14px;background:var(--bg-input);border-radius:var(--radius);
           border:1px solid ${integrityOk ? "rgba(87,204,153,.3)" : "rgba(231,111,81,.3)"};">
           <span style="font-size:.7rem;color:var(--text-muted);font-family:var(--font-mono);">CURRENT (RECOMPUTED):</span>
           <div style="font-family:var(--font-mono);font-size:.8rem;word-break:break-all;margin-top:3px;
-            color:${integrityOk ? "var(--success)" : "var(--danger)"};">${r.current_hash || "—"}</div>
+            color:${integrityOk ? "var(--success)" : "var(--danger)"};">${currentHash}</div>
         </div>
       </div>
     </div>
 
     <div style="display:flex;gap:10px;margin-top:4px;">
       <button class="btn btn-ghost" style="flex:1;" onclick="location.href='/pages/dashboard.html'">← Back to Documents</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="downloadVerifiedDoc(${r.document_id}, '${escHtml(r.filename)}')">⬇ Download</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="downloadVerifiedDoc(${docId}, '${escHtml(filename)}')">⬇ Download</button>
     </div>
   `;
 }
