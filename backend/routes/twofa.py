@@ -8,11 +8,10 @@ import jwt
 
 twofa_bp = Blueprint("twofa", __name__, url_prefix="/api/2fa")
 
-
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 #  POST /api/2fa/setup
 #  Start 2FA setup — generate secret + QR code
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 @twofa_bp.route("/setup", methods=["POST"])
 @jwt_required
@@ -36,21 +35,21 @@ def setup_2fa():
     qr_base64 = generate_qr_code_base64(secret, user.username)
 
     return jsonify({
-        "message": "Scan the QR code with your authenticator app, then verify with /api/2fa/verify-setup.",
-        "qr_code": f"data:image/png;base64,{qr_base64}",
+        "message": "Scan the QR code with your authenticator app, then verify to enable.",
+        "qr_code_b64": f"data:image/png;base64,{qr_base64}",  # Fixed key name to match JS
         "secret": secret,              # show only for manual entry
         "issuer": "SecureDocumentVault"
     }), 200
 
 
-# ─────────────────────────────────────────────
-#  POST /api/2fa/verify-setup
+# ---------------------------------------------
+#  POST /api/2fa/enable
 #  Confirm the TOTP code to ACTIVATE 2FA
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
-@twofa_bp.route("/verify-setup", methods=["POST"])
+@twofa_bp.route("/enable", methods=["POST"])
 @jwt_required
-def verify_setup():
+def enable_2fa():
     """
     Confirm 2FA activation by verifying the user's first TOTP code.
     Body: { code }
@@ -74,10 +73,10 @@ def verify_setup():
     return jsonify({"message": "2FA has been successfully enabled on your account."}), 200
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 #  POST /api/2fa/verify-login
 #  Verify TOTP code during login flow
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 @twofa_bp.route("/verify-login", methods=["POST"])
 def verify_login():
@@ -129,10 +128,10 @@ def verify_login():
     }), 200
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 #  DELETE /api/2fa/disable
 #  Disable 2FA (requires current TOTP code)
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 @twofa_bp.route("/disable", methods=["DELETE"])
 @jwt_required
