@@ -1,6 +1,6 @@
 /* ================================================
    Secure Document Vault — Auth Page Logic
-   Handles: Login, Register, 2FA, Password Strength
+   Handles: Login, Register, 2FA, Password Strength, OAuth
    ================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -35,6 +35,9 @@ function initLoginPage() {
   const twofaForm    = document.getElementById("twofa-form");
   const twofaBtn     = document.getElementById("twofa-btn");
   const backBtn      = document.getElementById("back-to-login");
+
+  // OAuth Buttons
+  const githubBtn    = document.getElementById("github-btn");
 
   let partialToken = null;
 
@@ -116,6 +119,50 @@ function initLoginPage() {
     loginSection.style.display = "block";
     clearAlert("alert-area");
     partialToken = null;
+  });
+
+  // ── GitHub OAuth Logic (Popup Approach) ─────────
+  githubBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    clearAlert("alert-area");
+
+    const width = 600;
+    const height = 700;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+        "/api/oauth/login",
+        "oauth_popup",
+        `width=${width},height=${height},left=${left},top=${top}`
+    );
+
+    const checkPopup = setInterval(() => {
+        if (!popup || popup.closed || popup.closed === undefined) {
+            clearInterval(checkPopup);
+            return;
+        }
+        try {
+            // Check if popup returned to our domain
+            if (popup.location.hostname === window.location.hostname) {
+                const bodyText = popup.document.body.innerText;
+                if (bodyText) {
+                    const responseData = JSON.parse(bodyText);
+                    if (responseData.access_token) {
+                        clearInterval(checkPopup);
+                        popup.close();
+                        handleLoginSuccess(responseData);
+                    } else if (responseData.error) {
+                        clearInterval(checkPopup);
+                        popup.close();
+                        showAlert("alert-area", responseData.error, "error");
+                    }
+                }
+            }
+        } catch (err) {
+            // Cross-origin errors are expected while user is interacting with GitHub
+        }
+    }, 500);
   });
 }
 

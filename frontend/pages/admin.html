@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — Secure Document Vault</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand"><span>🔐</span> SecureVault</div>
+  <div class="nav-links">
+    <button class="nav-link" onclick="location.href='/pages/dashboard.html'">📁 Documents</button>
+    <button class="nav-link active">⚙ Admin <span class="nav-badge">ADMIN</span></button>
+    <button class="nav-link" id="logout-btn">⏻ Logout</button>
+  </div>
+</nav>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <div style="padding:8px 12px;">
+      <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--font-mono);margin-bottom:12px;">Admin Panel</div>
+      <button class="nav-link active" style="width:100%;justify-content:flex-start;" onclick="showTab('users')">👥 Users</button>
+      <button class="nav-link" style="width:100%;justify-content:flex-start;" onclick="showTab('documents')">📁 All Documents</button>
+      <button class="nav-link" style="width:100%;justify-content:flex-start;" onclick="showTab('stats')">📊 Statistics</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- ── Tab: Users ── -->
+    <div id="tab-users">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <div>
+          <h1 style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em;">User Management</h1>
+          <p class="text-muted" style="margin-top:4px;">Manage roles, activate or deactivate accounts.</p>
+        </div>
+        <input id="user-search" class="form-input" type="text" placeholder="Search users…"
+          style="width:220px;padding:7px 12px;font-size:.8rem;" oninput="filterUsers(this.value)" />
+      </div>
+
+      <div id="users-loading" class="text-muted" style="padding:40px;text-align:center;">Loading users…</div>
+
+      <div class="card" style="display:none;" id="users-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>2FA</th>
+                <th>OAuth</th>
+                <th>Docs</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tab: Documents ── -->
+    <div id="tab-documents" style="display:none;">
+      <h1 style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-bottom:24px;">All Documents</h1>
+      <div id="all-docs-loading" class="text-muted" style="padding:40px;text-align:center;">Loading…</div>
+      <div class="card" style="display:none;" id="all-docs-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Filename</th><th>Owner</th><th>Size</th>
+                <th>Encrypted</th><th>Signed</th><th>Verified</th><th>Uploaded</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="all-docs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tab: Stats ── -->
+    <div id="tab-stats" style="display:none;">
+      <h1 style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-bottom:24px;">System Statistics</h1>
+      <div id="stats-loading" class="text-muted" style="padding:40px;text-align:center;">Loading…</div>
+      <div id="stats-content" style="display:none;"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Role change modal -->
+<div id="role-modal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-title">Change User Role</div>
+    <p class="text-muted" style="margin-bottom:16px;">
+      Select a new role for <strong id="role-modal-username"></strong>
+    </p>
+    <div class="form-group">
+      <label class="form-label">New Role</label>
+      <select class="form-input" id="role-select">
+        <option value="user">User — Upload and manage own documents</option>
+        <option value="manager">Manager — Review and verify documents</option>
+        <option value="admin">Admin — Full system access</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeRoleModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="confirm-role-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/utils.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

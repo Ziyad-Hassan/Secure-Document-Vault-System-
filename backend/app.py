@@ -8,13 +8,11 @@ import os
 import sys
 from flask import Flask, jsonify, send_from_directory
 
-
 # Add backend dir to path for clean imports
 sys.path.insert(0, os.path.dirname(__file__))
 
 from config import Config
 from extensions import db, cors
-
 
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="../frontend", static_url_path="")
@@ -31,15 +29,19 @@ def create_app() -> Flask:
     from routes.auth import auth_bp
     from routes.twofa import twofa_bp
     from routes.document import document_bp  
+    from routes.oauth import oauth_bp, init_oauth
 
-    # These will be added in later steps:
-    # from routes.admin import admin_bp
-    # from routes.oauth import oauth_bp
+    # Initialize OAuth before registering the blueprint
+    init_oauth(app)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(twofa_bp)
     app.register_blueprint(document_bp)
-    # app.register_blueprint(oauth_bp)
+    app.register_blueprint(oauth_bp)
+
+    # These will be added in later steps:
+    # from routes.admin import admin_bp
+    # app.register_blueprint(admin_bp)
 
     # ── Initialize database & seed roles ──────────────
     with app.app_context():

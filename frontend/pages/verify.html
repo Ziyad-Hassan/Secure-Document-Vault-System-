@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify Document — Secure Document Vault</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand"><span>🔐</span> SecureVault</div>
+  <div class="nav-links">
+    <button class="nav-link" onclick="location.href='/pages/dashboard.html'">📁 Documents</button>
+    <button class="nav-link" onclick="location.href='/pages/upload.html'">⬆ Upload</button>
+    <button class="nav-link active">✓ Verify</button>
+    <button class="nav-link" id="logout-btn">⏻ Logout</button>
+  </div>
+</nav>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <div style="padding:8px 12px;">
+      <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--font-mono);margin-bottom:12px;">Verification</div>
+      <button class="nav-link" style="width:100%;justify-content:flex-start;" onclick="location.href='/pages/dashboard.html'">📁 My Documents</button>
+      <button class="nav-link" style="width:100%;justify-content:flex-start;" onclick="location.href='/pages/upload.html'">⬆ Upload File</button>
+      <button class="nav-link active" style="width:100%;justify-content:flex-start;">🔍 Verify Doc</button>
+    </div>
+
+    <div style="padding:20px 12px 8px;border-top:1px solid var(--border);margin-top:16px;">
+      <div style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-family:var(--font-mono);">What gets verified</div>
+      <div style="font-size:.8rem;line-height:1.8;color:var(--text-muted);">
+        <div>🔷 SHA-256 hash</div>
+        <div>🔷 RSA-SHA256 signature</div>
+        <div>🔷 File integrity</div>
+        <div>🔷 No tampering</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content" style="max-width:720px;">
+    <h1 style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;">Verify Document</h1>
+    <p class="text-muted" style="margin-bottom:28px;">Check that a stored document has not been modified since upload.</p>
+
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-title" style="margin-bottom:16px;">Select Document to Verify</div>
+
+      <div class="form-group">
+        <label class="form-label">Document ID</label>
+        <div style="display:flex;gap:10px;">
+          <input class="form-input" type="number" id="doc-id-input" placeholder="Enter document ID…" min="1" style="flex:1;" />
+          <button class="btn btn-primary" style="width:auto;" id="verify-btn" onclick="verifyDocument()">
+            🔍 Verify
+          </button>
+        </div>
+      </div>
+
+      <div class="divider">or pick from your documents</div>
+
+      <div id="doc-select-loading" class="text-muted" style="font-size:.85rem;">Loading your documents…</div>
+      <select id="doc-select" class="form-input" style="display:none;" onchange="document.getElementById('doc-id-input').value = this.value">
+        <option value="">— Select a document —</option>
+      </select>
+    </div>
+
+    <!-- Results -->
+    <div id="result-area" style="display:none;">
+      <div class="card" id="result-card">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/utils.js"></script>
+<script src="/js/verify.js"></script>
+</body>
+</html>

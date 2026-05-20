@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload — Secure Document Vault</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-brand"><span>🔐</span> SecureVault</div>
+  <div class="nav-links">
+    <button class="nav-link" onclick="location.href='/pages/dashboard.html'">📁 Documents</button>
+    <button class="nav-link active">⬆ Upload</button>
+    <button class="nav-link" onclick="location.href='/pages/verify.html'">✓ Verify</button>
+    <button class="nav-link" id="logout-btn">⏻ Logout</button>
+  </div>
+</nav>
+
+<div class="dashboard">
+  <aside class="sidebar">
+    <div style="padding:8px 12px;">
+      <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--font-mono);margin-bottom:12px;">Actions</div>
+      <button class="nav-link" style="width:100%;justify-content:flex-start;" onclick="location.href='/pages/dashboard.html'">📁 My Documents</button>
+      <button class="nav-link active" style="width:100%;justify-content:flex-start;">⬆ Upload File</button>
+      <button class="nav-link" style="width:100%;justify-content:flex-start;" onclick="location.href='/pages/verify.html'">🔍 Verify Doc</button>
+    </div>
+
+    <div style="padding:20px 12px 8px;border-top:1px solid var(--border);margin-top:16px;">
+      <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--font-mono);margin-bottom:12px;">Upload Process</div>
+      <div id="step-list" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="step-item" id="step-1">
+          <span style="font-size:.8rem;">① Select file</span>
+        </div>
+        <div class="step-item" id="step-2" style="opacity:.4;">
+          <span style="font-size:.8rem;">② SHA-256 hash</span>
+        </div>
+        <div class="step-item" id="step-3" style="opacity:.4;">
+          <span style="font-size:.8rem;">③ RSA sign</span>
+        </div>
+        <div class="step-item" id="step-4" style="opacity:.4;">
+          <span style="font-size:.8rem;">④ AES-256 encrypt</span>
+        </div>
+        <div class="step-item" id="step-5" style="opacity:.4;">
+          <span style="font-size:.8rem;">⑤ Store securely</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content" style="max-width:700px;">
+    <h1 style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;">Upload Document</h1>
+    <p class="text-muted" style="margin-bottom:28px;">Your document will be hashed, signed, and encrypted before storage.</p>
+
+    <div id="alert-area"></div>
+
+    <!-- Drop Zone -->
+    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon">📄</div>
+      <div style="font-weight:600;margin-bottom:6px;">Drop file here or click to browse</div>
+      <div class="text-muted" style="font-size:.85rem;">PDF, DOCX, TXT, PNG, JPG • Max 10 MB</div>
+      <input type="file" id="file-input" style="display:none"
+        accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" />
+    </div>
+
+    <!-- File preview (shown after selection) -->
+    <div id="file-preview" style="display:none;" class="card" style="margin-top:16px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div id="file-icon" style="font-size:2.5rem;">📄</div>
+        <div style="flex:1;">
+          <div id="file-name" style="font-weight:600;"></div>
+          <div id="file-meta" class="text-muted" style="font-size:.8rem;font-family:var(--font-mono);"></div>
+        </div>
+        <button class="btn btn-sm" onclick="clearFile()" title="Remove" style="color:var(--danger);">✕</button>
+      </div>
+
+      <!-- Client-side hash preview -->
+      <div id="hash-preview" style="display:none;margin-top:16px;padding:12px;background:var(--bg-input);
+        border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--text-muted);margin-bottom:4px;">SHA-256 HASH (computed client-side)</div>
+        <div id="hash-value" style="font-family:var(--font-mono);font-size:.78rem;word-break:break-all;"></div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="form-group" style="margin-top:20px;">
+      <label class="form-label">Description (optional)</label>
+      <input class="form-input" type="text" id="description" placeholder="Brief description of this document…" />
+    </div>
+
+    <!-- Upload button -->
+    <button class="btn btn-primary" id="upload-btn" disabled onclick="uploadFile()">
+      🔒 Encrypt &amp; Upload
+    </button>
+
+    <!-- Progress section -->
+    <div id="progress-section" style="display:none;margin-top:24px;">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px;">⚙ Processing…</div>
+        <div id="progress-steps" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </div>
+
+    <!-- Success result -->
+    <div id="success-section" style="display:none;margin-top:24px;">
+      <div class="card">
+        <div style="font-size:2rem;margin-bottom:12px;text-align:center;">✅</div>
+        <h3 style="text-align:center;margin-bottom:16px;">Document Secured Successfully</h3>
+        <div id="result-details" style="background:var(--bg-input);padding:16px;border-radius:var(--radius);
+          font-family:var(--font-mono);font-size:.78rem;line-height:1.9;border:1px solid var(--border);"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button class="btn btn-ghost" onclick="resetForm()">Upload Another</button>
+          <button class="btn btn-primary" onclick="location.href='/pages/dashboard.html'">View All Documents</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/utils.js"></script>
+<script src="/js/upload.js"></script>
+</body>
+</html>
