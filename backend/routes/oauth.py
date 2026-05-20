@@ -1,12 +1,17 @@
 import os
-from flask import Blueprint, url_for, jsonify
+from flask import Blueprint, jsonify, redirect, request
 from authlib.integrations.flask_client import OAuth
 from models.user import User, Role
 from extensions import db
 from middleware.jwt_auth import generate_access_token, generate_refresh_token
+import urllib.parse
+
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 oauth_bp = Blueprint("oauth", __name__, url_prefix="/api/oauth")
 oauth = OAuth()
+
+CALLBACK_URL = "https://localhost:5443/api/oauth/callback"
 
 def init_oauth(app):
     oauth.init_app(app)
@@ -15,78 +20,72 @@ def init_oauth(app):
         client_id=os.getenv("GITHUB_CLIENT_ID"),
         client_secret=os.getenv("GITHUB_CLIENT_SECRET"),
         access_token_url='https://github.com/login/oauth/access_token',
-        access_token_params=None,
         authorize_url='https://github.com/login/oauth/authorize',
-        authorize_params=None,
         api_base_url='https://api.github.com/',
         client_kwargs={'scope': 'user:email'},
     )
 
 @oauth_bp.route('/login')
 def login():
-    """Redirect route for GitHub OAuth login"""
-    redirect_uri = url_for('oauth.auth_callback', _external=True)
-    return oauth.github.authorize_redirect(redirect_uri)
-
+    return oauth.github.authorize_redirect(CALLBACK_URL, prompt='login')
 @oauth_bp.route('/callback')
 def auth_callback():
-    """Callback route where GitHub returns with user data upon successful login"""
     try:
-        token = oauth.github.authorize_access_token()
+        token = oauth.github.authorize_access_token()   
     except Exception as e:
-        return jsonify({"error": "OAuth authentication failed."}), 400
+        print(f"[OAuth ERROR] {e}")                     
+        return redirect(f"/?error=OAuth+failed")
 
-    # Fetch user profile data
-    resp = oauth.github.get('user')
+    resp = oauth.github.get('user', token=token)
     if not resp.ok:
-        return jsonify({"error": "Failed to fetch user info from GitHub."}), 400
-    
+        return redirect("/?error=Failed+to+fetch+GitHub+profile")
+
     user_info = resp.json()
-    username = user_info.get("login")
-    
-    # GitHub emails might be private, so we need a separate request to fetch them
-    email = user_info.get("email")
+    username  = user_info.get("login")
+    email     = user_info.get("email")
+
     if not email:
-        email_resp = oauth.github.get('user/emails')
+        email_resp = oauth.github.get('user/emails', token=token)
         if email_resp.ok:
-            emails = email_resp.json()
-            # Find the primary and verified email
-            for e in emails:
+            for e in email_resp.json():
                 if e.get("primary") and e.get("verified"):
                     email = e.get("email")
                     break
 
     if not email:
-        return jsonify({"error": "No verified email found on this GitHub account."}), 400
+        return redirect("/?error=No+verified+email+on+GitHub")
 
-    # Check if the user already exists in the database
     user = User.query.filter_by(email=email).first()
-
-    # If user does not exist, create a new account with default 'user' role
     if not user:
+        base_username = username
+        counter = 1
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+
         user_role = Role.query.filter_by(name="user").first()
         user = User(
             username=username,
             email=email,
-            password_hash="",  # No password needed for OAuth-created accounts
+            password_hash=None,
             role_id=user_role.id if user_role else 1,
-            is_2fa_enabled=False 
+            oauth_provider="github",
+            oauth_id=str(user_info.get("id", "")),
+            is_2fa_enabled=False
         )
         db.session.add(user)
         db.session.commit()
 
-    # Generate JWT tokens for the authenticated user
-    access_token = generate_access_token(user.id, user.username, user.role.name)
+    if not user.is_active:
+        return redirect("/?error=Account+deactivated")
+
+    access_token  = generate_access_token(user.id, user.username, user.role.name)
     refresh_token = generate_refresh_token(user.id)
 
-    return jsonify({
-        "message": "GitHub OAuth Login Successful",
-        "access_token": access_token,
+    params = urllib.parse.urlencode({
+        "access_token":  access_token,
         "refresh_token": refresh_token,
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role.name
-        }
-    }), 200
+        "username":      user.username,
+        "role":          user.role.name,
+    })
+    return redirect(f"/pages/oauth-callback.html?{params}")

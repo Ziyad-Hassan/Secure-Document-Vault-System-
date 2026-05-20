@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Signing in… — SecureVault</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card" style="text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:16px;">🔐</div>
+    <h2 id="msg">Signing you in…</h2>
+    <p class="text-muted" id="sub">Please wait a moment.</p>
+    <div style="margin-top:20px;" id="error-area"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const error  = params.get("error");
+
+  if (error) {
+    document.getElementById("msg").textContent = "Login Failed";
+    document.getElementById("sub").textContent = "";
+    document.getElementById("error-area").innerHTML =
+      `<div class="alert alert-error">${error}</div>
+       <a href="/" style="display:inline-block;margin-top:12px;color:var(--primary);">← Back to Login</a>`;
+    return;
+  }
+
+  const access_token  = params.get("access_token");
+  const refresh_token = params.get("refresh_token");
+  const username      = params.get("username");
+  const role          = params.get("role");
+
+  if (!access_token) {
+    document.getElementById("msg").textContent = "Something went wrong";
+    document.getElementById("error-area").innerHTML =
+      `<div class="alert alert-error">No token received.</div>
+       <a href="/">← Back to Login</a>`;
+    return;
+  }
+
+ 
+  localStorage.setItem("access_token",  access_token);
+  localStorage.setItem("refresh_token", refresh_token);
+  localStorage.setItem("user", JSON.stringify({ username, role, is_2fa_enabled: false }));
+
+  document.getElementById("msg").textContent = `Welcome, ${username}! ✓`;
+  document.getElementById("sub").textContent = "Redirecting to dashboard…";
+
+  setTimeout(() => {
+    const targetPage = role === "admin" ? "/pages/admin.html" : "/pages/dashboard.html";
+    window.location.replace(targetPage);
+  }, 0);
+});
+</script>
+</body>
+</html>

@@ -7,36 +7,39 @@ let allDocuments = [];
 let deleteDocId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Check if user is logged in
-    if (!Auth.isLoggedIn()) {
-        window.location.href = "/index.html";
-        return;
-    }
+   
+    setTimeout(() => {
+        // 1. Check if user is logged in
+        if (!Auth.isLoggedIn()) {
+            window.location.href = "/index.html";
+            return;
+        }
 
-    const user = Auth.getUser();
+        const user = Auth.getUser();
 
-    // 2. Populate User Info in Sidebar
-    document.getElementById("sidebar-username").textContent = user.username || "User";
-    document.getElementById("sidebar-role").textContent = user.role ? user.role.toUpperCase() : "USER";
-    document.getElementById("avatar").textContent = (user.username || "U").charAt(0).toUpperCase();
+        // 2. Populate User Info in Sidebar
+        document.getElementById("sidebar-username").textContent = user.username || "User";
+        document.getElementById("sidebar-role").textContent = user.role ? user.role.toUpperCase() : "USER";
+        document.getElementById("avatar").textContent = (user.username || "U").charAt(0).toUpperCase();
 
-    // Show Admin Link if user is admin
-    if (user.role === "admin") {
-        const adminLink = document.getElementById("admin-link");
-        if (adminLink) adminLink.style.display = "flex";
-    }
+        // Show Admin Link if user is admin
+        if (user.role === "admin") {
+            const adminLink = document.getElementById("admin-link");
+            if (adminLink) adminLink.style.display = "flex";
+        }
 
-    // 3. Logout Event
-    document.getElementById("logout-btn")?.addEventListener("click", () => {
-        Auth.clear();
-        window.location.href = "/index.html";
-    });
+        // 3. Logout Event
+        document.getElementById("logout-btn")?.addEventListener("click", () => {
+            Auth.clear();
+            window.location.href = "/index.html";
+        });
 
-    // 4. Fetch Documents
-    fetchDocuments();
+        // 4. Fetch Documents
+        fetchDocuments();
 
-    // 5. 2FA Setup Event
-    document.getElementById("sidebar-2fa-btn")?.addEventListener("click", openTwofaSetup);
+        // 5. 2FA Setup Event
+        document.getElementById("sidebar-2fa-btn")?.addEventListener("click", openTwofaSetup);
+    }, 100); 
 });
 
 // ── Fetch Documents ──────────────────────────────────────────
