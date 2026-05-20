@@ -51,9 +51,9 @@ def upload_document():
     file_hash = compute_sha256(file_bytes)
 
     signature = None
-    if getattr(current_user, 'encrypted_private_key', None):
+    if getattr(current_user, 'private_key_pem', None):
         try:
-            signature = sign_document(file_bytes, current_user.encrypted_private_key)
+            signature = sign_document(file_bytes, current_user.private_key_pem)
         except Exception as e:
             return jsonify({"error": f"Failed to sign document: {str(e)}"}), 500
 
@@ -126,8 +126,8 @@ def verify_document(doc_id):
     is_intact = verify_integrity(decrypted_bytes, doc.sha256_hash)
     
     is_authentic = False
-    if doc.digital_signature and getattr(file_owner, 'public_key', None):
-        is_authentic = verify_signature(decrypted_bytes, doc.digital_signature, file_owner.public_key)
+    if doc.digital_signature and getattr(file_owner, 'public_key_pem', None):
+        is_authentic = verify_signature(decrypted_bytes, doc.digital_signature, file_owner.public_key_pem)
 
     return jsonify({
         "document_id": doc.id,

@@ -134,7 +134,7 @@ function updateStats() {
 window.downloadDocument = async function(docId, filename) {
     showToast(`Decrypting and downloading ${filename}...`, "info");
     
-    const token = Auth.getToken();
+    const token = Auth.getAccessToken();
     try {
         const response = await fetch(`/api/documents/${docId}/download`, {
             method: 'GET',
