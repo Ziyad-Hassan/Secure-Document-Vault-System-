@@ -8,15 +8,20 @@ import os
 import sys
 from flask import Flask, jsonify, send_from_directory
 
-# Add backend dir to path for clean imports
 sys.path.insert(0, os.path.dirname(__file__))
 
 from config import Config
 from extensions import db, cors
 
+
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="../frontend", static_url_path="")
     app.config.from_object(Config)
+
+    # ── Session config (OAuth) ───────────
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'   
+    app.config['SESSION_COOKIE_SECURE']   = True    
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
 
     # ── Extensions ─────────────────────────────────────
     db.init_app(app)
@@ -26,22 +31,18 @@ def create_app() -> Flask:
     os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
 
     # ── Register Blueprints ────────────────────────────
-    from routes.auth import auth_bp
-    from routes.twofa import twofa_bp
-    from routes.document import document_bp  
-    from routes.oauth import oauth_bp, init_oauth
+    from routes.auth     import auth_bp
+    from routes.twofa    import twofa_bp
+    from routes.oauth    import oauth_bp, init_oauth
+    from routes.document import document_bp   
 
-    # Initialize OAuth before registering the blueprint
+    # ── Init OAuth (register_blueprint) ──────
     init_oauth(app)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(twofa_bp)
     app.register_blueprint(document_bp)
     app.register_blueprint(oauth_bp)
-
-    # These will be added in later steps:
-    # from routes.admin import admin_bp
-    # app.register_blueprint(admin_bp)
 
     # ── Initialize database & seed roles ──────────────
     with app.app_context():
@@ -81,7 +82,6 @@ def create_app() -> Flask:
 
 
 def _seed_roles():
-    """Create default roles if they don't exist yet."""
     from models.user import Role
     roles = [
         ("admin",   "Full system access: manage users, roles, and documents."),
@@ -108,5 +108,4 @@ if __name__ == "__main__":
         app.run(host="0.0.0.0", port=5443, ssl_context=ssl_context, debug=Config.DEBUG)
     else:
         print("[HTTP]  No SSL certificates found — running over HTTP on port 5000")
-        print("[HTTP]  To enable HTTPS, run: python generate_certs.py")
         app.run(host="0.0.0.0", port=5000, debug=Config.DEBUG)

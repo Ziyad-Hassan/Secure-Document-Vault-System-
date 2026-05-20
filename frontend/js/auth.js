@@ -121,48 +121,11 @@ function initLoginPage() {
     partialToken = null;
   });
 
-  // ── GitHub OAuth Logic (Popup Approach) ─────────
+  // ── GitHub OAuth Logic (Direct Redirect) ─────────
   githubBtn?.addEventListener("click", (e) => {
     e.preventDefault();
-    clearAlert("alert-area");
-
-    const width = 600;
-    const height = 700;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    const popup = window.open(
-        "/api/oauth/login",
-        "oauth_popup",
-        `width=${width},height=${height},left=${left},top=${top}`
-    );
-
-    const checkPopup = setInterval(() => {
-        if (!popup || popup.closed || popup.closed === undefined) {
-            clearInterval(checkPopup);
-            return;
-        }
-        try {
-            // Check if popup returned to our domain
-            if (popup.location.hostname === window.location.hostname) {
-                const bodyText = popup.document.body.innerText;
-                if (bodyText) {
-                    const responseData = JSON.parse(bodyText);
-                    if (responseData.access_token) {
-                        clearInterval(checkPopup);
-                        popup.close();
-                        handleLoginSuccess(responseData);
-                    } else if (responseData.error) {
-                        clearInterval(checkPopup);
-                        popup.close();
-                        showAlert("alert-area", responseData.error, "error");
-                    }
-                }
-            }
-        } catch (err) {
-            // Cross-origin errors are expected while user is interacting with GitHub
-        }
-    }, 500);
+    // تحويل مباشر في نفس الصفحة
+    window.location.href = "/api/oauth/login";
   });
 }
 
@@ -289,7 +252,7 @@ async function checkPasswordStrength(password) {
     // Policy checklist
     const checks = data.checks || {};
     const items = {
-      "p-len":   checks.length_8,
+      "p-len":  checks.length_8,
       "p-upper": checks.uppercase,
       "p-lower": checks.lowercase,
       "p-digit": checks.digit,
