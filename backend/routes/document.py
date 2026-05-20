@@ -121,19 +121,35 @@ def verify_document(doc_id):
     try:
         decrypted_bytes = load_and_decrypt(file_path)
     except Exception:
-        return jsonify({"status": "Corrupted", "message": "File encryption is broken or tampered."}), 400
+        return jsonify({
+            "document_id": doc.id,
+            "filename": doc.original_filename,
+            "is_intact": False,
+            "is_authentic": False,
+            "stored_hash": doc.sha256_hash,
+            "current_hash": "ERROR_DECRYPTION_FAILED",
+            "message": "File encryption is broken or tampered."
+        }), 400
 
-    is_intact = verify_integrity(decrypted_bytes, doc.sha256_hash)
+    # Compute the current hash of the decrypted file to send to the frontend
+    current_hash = compute_sha256(decrypted_bytes)
     
-    is_authentic = False
+    # Compare the hashes
+    is_intact = (current_hash == doc.sha256_hash)
+    
+    # Verify signature (if no signature exists, return None instead of False)
+    is_authentic = None 
     if doc.digital_signature and getattr(file_owner, 'public_key_pem', None):
         is_authentic = verify_signature(decrypted_bytes, doc.digital_signature, file_owner.public_key_pem)
 
     return jsonify({
         "document_id": doc.id,
+        "filename": doc.original_filename,
         "is_intact": is_intact,
         "is_authentic": is_authentic,
-        "message": "Verification complete" if (is_intact and is_authentic) else "Verification failed! File may be tampered."
+        "stored_hash": doc.sha256_hash,
+        "current_hash": current_hash,
+        "message": "Verification complete" if is_intact else "Verification failed! File may be tampered."
     }), 200
 
 
@@ -142,6 +158,7 @@ def verify_document(doc_id):
 def get_my_documents():
     docs = Document.query.filter_by(user_id=g.current_user_id).all()
     return jsonify({"documents": [doc.to_dict() for doc in docs]}), 200
+
 
 @document_bp.route("/<int:doc_id>", methods=["DELETE"])
 @jwt_required

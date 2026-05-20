@@ -80,24 +80,26 @@ function renderResult(r) {
 
   area.style.display = "block";
 
-  // Flexible parsing to match any backend response structure
-  const overallOk = r.verified ?? r.is_authentic ?? r.is_verified ?? true;
-  const integrityOk = r.integrity_check ?? r.sha256_match ?? r.hashes_match ?? true;
-  const sigCheck = r.signature_check ?? r.signature_valid ?? r.is_signed ?? true;
+  // Read the new values coming from the backend
+  const integrityOk = r.is_intact === true;
+  const sigCheck = r.is_authentic; // Can be true, false, or null
+
+  // The file is considered valid if the hash matches and the signature is not invalid
+  // (Lack of signature does not mean it is tampered)
+  const overallOk = integrityOk && (sigCheck !== false);
 
   const overallColor = overallOk ? "var(--success)" : "var(--danger)";
   const overallIcon  = overallOk ? "✅" : "❌";
-  const overallLabel = overallOk ? "VERIFIED — File is intact and authentic" : "TAMPERED — File may have been modified!";
+  const overallLabel = overallOk ? "VERIFIED — File is intact" : "TAMPERED — File has been modified!";
 
   const integrityIcon = integrityOk ? "✅" : "❌";
   const sigIcon  = sigCheck === true ? "✅" : sigCheck === false ? "❌" : "⚠️";
-  const sigLabel = sigCheck === true ? "Valid" : sigCheck === false ? "Invalid" : "Not available";
+  const sigLabel = sigCheck === true ? "Valid Signature" : sigCheck === false ? "Invalid Signature" : "No Signature (N/A)";
 
-  const details = r.details || {};
-  const docId = r.document_id || r.id || document.getElementById("doc-id-input").value;
-  const filename = r.filename || r.original_filename || "Document";
-  const storedHash = r.stored_hash || r.expected_hash || r.sha256_hash || "N/A";
-  const currentHash = r.current_hash || r.computed_hash || storedHash;
+  const docId = r.document_id || document.getElementById("doc-id-input").value;
+  const filename = r.filename || "Document";
+  const storedHash = r.stored_hash || "N/A";
+  const currentHash = r.current_hash || "N/A";
 
   card.innerHTML = `
     <div style="display:flex;align-items:center;gap:16px;padding:20px;
@@ -114,7 +116,6 @@ function renderResult(r) {
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
-
       <div style="padding:16px;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border);">
         <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
           Integrity Check (SHA-256)
@@ -122,18 +123,15 @@ function renderResult(r) {
         <div style="display:flex;align-items:center;gap:8px;font-weight:600;">
           ${integrityIcon} ${integrityOk ? "Hashes match" : "HASH MISMATCH"}
         </div>
-        ${details.integrity_error ? `<div style="color:var(--danger);font-size:.78rem;margin-top:6px;">${details.integrity_error}</div>` : ""}
       </div>
 
       <div style="padding:16px;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border);">
         <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
-          Digital Signature (RSA-SHA256)
+          Digital Signature (RSA)
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-weight:600;">
           ${sigIcon} ${sigLabel}
         </div>
-        ${details.signed_by ? `<div class="text-muted" style="font-size:.78rem;margin-top:4px;">Signed by: ${details.signed_by}</div>` : ""}
-        ${details.signature_warning ? `<div style="color:var(--warning);font-size:.78rem;margin-top:6px;">${details.signature_warning}</div>` : ""}
       </div>
     </div>
 
