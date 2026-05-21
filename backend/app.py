@@ -35,6 +35,7 @@ def create_app() -> Flask:
     from routes.twofa    import twofa_bp
     from routes.oauth    import oauth_bp, init_oauth
     from routes.document import document_bp   
+    from routes.admin import admin_bp
 
     # ── Init OAuth (register_blueprint) ──────
     init_oauth(app)
@@ -43,6 +44,7 @@ def create_app() -> Flask:
     app.register_blueprint(twofa_bp)
     app.register_blueprint(document_bp)
     app.register_blueprint(oauth_bp)
+    app.register_blueprint(admin_bp)
 
     # ── Initialize database & seed roles ──────────────
     with app.app_context():

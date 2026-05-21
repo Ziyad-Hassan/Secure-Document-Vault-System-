@@ -7,7 +7,7 @@ let allDocuments = [];
 let deleteDocId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-   
+    
     setTimeout(() => {
         // 1. Check if user is logged in
         if (!Auth.isLoggedIn()) {
@@ -22,8 +22,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("sidebar-role").textContent = user.role ? user.role.toUpperCase() : "USER";
         document.getElementById("avatar").textContent = (user.username || "U").charAt(0).toUpperCase();
 
-        // Show Admin Link if user is admin
-        if (user.role === "admin") {
+        // Show Admin Link if user is admin or manager
+        if (user.role === "admin" || user.role === "manager") {
             const adminLink = document.getElementById("admin-link");
             if (adminLink) adminLink.style.display = "flex";
         }

@@ -52,10 +52,18 @@ def upload_document():
 
     signature = None
     if getattr(current_user, 'private_key_pem', None):
+        pem_data = current_user.private_key_pem
+        
+        # Ensure the key is a string because sign_document will call .encode()
+        if isinstance(pem_data, bytes):
+            pem_data = pem_data.decode('utf-8')
+            
         try:
-            signature = sign_document(file_bytes, current_user.private_key_pem)
+            signature = sign_document(file_bytes, pem_data)
         except Exception as e:
-            return jsonify({"error": f"Failed to sign document: {str(e)}"}), 500
+            # If the error message is empty, use repr(e) to extract the raw exception details
+            err_msg = str(e) if str(e) else repr(e)
+            return jsonify({"error": f"Failed to sign document: {err_msg}"}), 500
 
     try:
         encrypt_and_save(file_bytes, save_path)
@@ -129,15 +137,11 @@ def verify_document(doc_id):
             "stored_hash": doc.sha256_hash,
             "current_hash": "ERROR_DECRYPTION_FAILED",
             "message": "File encryption is broken or tampered."
-        }), 400
+        }), 200
 
-    # Compute the current hash of the decrypted file to send to the frontend
     current_hash = compute_sha256(decrypted_bytes)
-    
-    # Compare the hashes
     is_intact = (current_hash == doc.sha256_hash)
     
-    # Verify signature (if no signature exists, return None instead of False)
     is_authentic = None 
     if doc.digital_signature and getattr(file_owner, 'public_key_pem', None):
         is_authentic = verify_signature(decrypted_bytes, doc.digital_signature, file_owner.public_key_pem)
@@ -160,27 +164,38 @@ def get_my_documents():
     return jsonify({"documents": [doc.to_dict() for doc in docs]}), 200
 
 
+@document_bp.route("/<int:doc_id>/approve", methods=["PATCH"])
+@jwt_required
+@role_required("admin", "manager")
+def approve_document(doc_id):
+    doc = Document.query.get_or_404(doc_id)
+    doc.is_verified = True
+    db.session.commit()
+    
+    return jsonify({
+        "message": f"Document '{doc.original_filename}' approved successfully.",
+        "document": doc.to_dict()
+    }), 200
+
+
 @document_bp.route("/<int:doc_id>", methods=["DELETE"])
 @jwt_required
 def delete_document(doc_id):
     current_user = User.query.get(g.current_user_id)
     doc = Document.query.get_or_404(doc_id)
 
-    # Check permissions (Owner or Admin)
     if doc.user_id != current_user.id and g.current_role != "admin":
         return jsonify({"error": "Unauthorized to delete this document"}), 403
 
     upload_folder = current_app.config.get("UPLOAD_FOLDER", "uploads")
     file_path = os.path.join(upload_folder, doc.stored_filename)
 
-    # Remove the physical encrypted file from the server
     if os.path.exists(file_path):
         try:
             os.remove(file_path)
         except Exception as e:
             return jsonify({"error": f"Failed to delete physical file: {str(e)}"}), 500
 
-    # Remove the record from the database
     db.session.delete(doc)
     db.session.commit()
 

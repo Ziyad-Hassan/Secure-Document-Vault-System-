@@ -8,11 +8,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const isRegister = !!document.getElementById("register-form");
   const isLogin    = !!document.getElementById("login-form");
 
-  // Redirect if already logged in
+  // Redirect if already logged in based on role
   if (Auth.isLoggedIn()) {
-    window.location.href = "/pages/dashboard.html";
+    const user = Auth.getUser();
+    if (user && (user.role === "admin" || user.role === "manager")) {
+      window.location.href = "/pages/admin.html";
+    } else {
+      window.location.href = "/pages/dashboard.html";
+    }
     return;
   }
+
+  // Handle ALL GitHub OAuth buttons globally to prevent ID conflicts
+  document.querySelectorAll("#github-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.location.href = "/api/oauth/login";
+    });
+  });
 
   if (isLogin)    initLoginPage();
   if (isRegister) initRegisterPage();
@@ -35,9 +48,6 @@ function initLoginPage() {
   const twofaForm    = document.getElementById("twofa-form");
   const twofaBtn     = document.getElementById("twofa-btn");
   const backBtn      = document.getElementById("back-to-login");
-
-  // OAuth Buttons
-  const githubBtn    = document.getElementById("github-btn");
 
   let partialToken = null;
 
@@ -133,12 +143,6 @@ function initLoginPage() {
     clearAlert("alert-area");
     partialToken = null;
   });
-
-  // ── GitHub OAuth Logic (Direct Redirect) ─────────
-  githubBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    window.location.href = "/api/oauth/login";
-  });
 }
 
 function handleLoginSuccess(data) {
@@ -148,8 +152,11 @@ function handleLoginSuccess(data) {
 
   // Role-based redirect
   const role = data.user.role;
-  if (role === "admin")   window.location.href = "/pages/admin.html";
-  else                    window.location.href = "/pages/dashboard.html";
+  if (role === "admin" || role === "manager") {
+    window.location.href = "/pages/admin.html";
+  } else {
+    window.location.href = "/pages/dashboard.html";
+  }
 }
 
 

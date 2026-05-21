@@ -1,10 +1,11 @@
 import os
-from flask import Blueprint, jsonify, redirect, request
+import urllib.parse
+from flask import Blueprint, redirect
 from authlib.integrations.flask_client import OAuth
 from models.user import User, Role
 from extensions import db
 from middleware.jwt_auth import generate_access_token, generate_refresh_token, generate_partial_token
-import urllib.parse
+from services.signature import generate_rsa_keypair, encrypt_private_key
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
@@ -57,12 +58,18 @@ def auth_callback():
         return redirect("/?error=No+verified+email+on+GitHub")
 
     user = User.query.filter_by(email=email).first()
+    
+    # --- Create new user and generate ENCRYPTED RSA keys ---
     if not user:
         base_username = username
         counter = 1
         while User.query.filter_by(username=username).first():
             username = f"{base_username}{counter}"
             counter += 1
+
+        # Use the system's native key generation and encryption
+        private_pem_raw, public_pem = generate_rsa_keypair()
+        encrypted_private_pem = encrypt_private_key(private_pem_raw)
 
         user_role = Role.query.filter_by(name="user").first()
         user = User(
@@ -72,7 +79,9 @@ def auth_callback():
             role_id=user_role.id if user_role else 1,
             oauth_provider="github",
             oauth_id=str(user_info.get("id", "")),
-            is_2fa_enabled=False
+            is_2fa_enabled=False,
+            public_key_pem=public_pem,
+            private_key_pem=encrypted_private_pem  # Stored securely!
         )
         db.session.add(user)
         db.session.commit()
